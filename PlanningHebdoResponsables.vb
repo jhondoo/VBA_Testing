@@ -1,67 +1,12 @@
-
-
-Sub gantt()
-
-    
-
-    Dim gantt As Worksheet: Set gantt = ThisWorkbook.Sheets("gantt")
-    Dim data_alice As Worksheet: Set data_alice = ThisWorkbook.Sheets("data_alice")
-    
-    gantt.UsedRange.Cells = ""
-
-    
-    Set dict = CreateObject("Scripting.Dictionary")
-    
-    ' remplis gantt
-    
-    Dim n As Integer: n = 2
-    
-    Dim responsable As String: responsable = data_alice.Range("J" & n).Value
-    
-    While data_alice.Range("J" & n) <> ""
-    
-        responsable = data_alice.Range("J" & n).Value
-        
-        If Not dict.exists(responsable) Then
-        
-            dict.Add responsable, n
-            
-        End If
-
-        gantt.Rows(dict(responsable)).Insert
-        gantt.Range("A" & dict(responsable)).Value = responsable
-        
-        
-        For Each r In dict
-            If r <> responsable Then
-                dict(r) = dict(r) + 1
-            End If
-        Next r
-        
-        n = n + 1
-    Wend
-    
-    
-    'Debug.Print WorksheetFunction.WeekNum(CDate(data_alice.Range("M2")), 21)
-    
-    
-
-
-End Sub
-
-
 Sub PlanningHebdoResponsables()
 
     Dim wsSource As Worksheet, wsDest As Worksheet
     Dim ligneSource As Long, derLigne As Long
-    Dim semaineCourante As Integer, semaineMax As Integer
-    Dim i As Long, semaine As Integer
+    Dim i As Long
     Dim dateFinMax As Date
     Dim currentDate As Date
     Dim dateDebut As Date, dateFin As Date
-    Dim dictResponsables As Object
     Dim ligneEcriture As Long
-    Dim projetCle As String
     Dim colSemaine As Integer
 
     ' Référence à la feuille contenant les données
@@ -77,34 +22,35 @@ Sub PlanningHebdoResponsables()
     Set wsDest = ThisWorkbook.Sheets.Add
     wsDest.Name = "gantt"
 
-    ' Date actuelle et semaine courante
+    ' Date actuelle
     currentDate = Date
-    semaineCourante = Application.WorksheetFunction.WeekNum(currentDate, 21)
 
     ' Trouver la date fin maximale
     derLigne = wsSource.Cells(wsSource.Rows.Count, 1).End(xlUp).Row
     dateFinMax = wsSource.Cells(2, 11).Value
 
     For i = 2 To derLigne
-        If wsSource.Cells(i, 4).Value > dateFinMax Then
+        If wsSource.Cells(i, 11).Value > dateFinMax Then
             dateFinMax = wsSource.Cells(i, 11).Value
         End If
     Next i
 
-    semaineMax = Application.WorksheetFunction.WeekNum(dateFinMax, 21)
+    ' Calcul du nombre de semaines entre maintenant et la date fin maximale
+    Dim nbSemaines As Long
+    nbSemaines = DateDiff("ww", currentDate, dateFinMax, vbMonday, vbFirstFourDays)
 
     ' Écrire en-tête des colonnes
     wsDest.Cells(1, 1).Value = "Responsable"
     wsDest.Cells(1, 2).Value = "Projet"
     colSemaine = 3
-    
-    Debug.Print semaineCourante
-    Debug.Print semaineMax
 
-    For semaine = semaineCourante To semaineMax
-        wsDest.Cells(1, colSemaine).Value = "Semaine " & semaine
+    Dim j As Long
+    For j = 0 To nbSemaines
+        Dim dSemaine As Date
+        dSemaine = DateAdd("ww", j, currentDate)
+        wsDest.Cells(1, colSemaine).Value = "Semaine " & Format(dSemaine, "ww") & " (" & Year(dSemaine) & ")"
         colSemaine = colSemaine + 1
-    Next semaine
+    Next j
 
     ' Initialisation
     ligneEcriture = 2
@@ -122,14 +68,14 @@ Sub PlanningHebdoResponsables()
         wsDest.Cells(ligneEcriture, 2).Value = projet
 
         ' Marquer les semaines concernées
-        For semaine = semaineCourante To semaineMax
+        For j = 0 To nbSemaines
             Dim dateSemaine As Date
-            dateSemaine = DateAdd("ww", semaine - semaineCourante, currentDate)
+            dateSemaine = DateAdd("ww", j, currentDate)
 
             If dateFin >= dateSemaine And dateDebut <= dateSemaine Then
-                wsDest.Cells(ligneEcriture, semaine - semaineCourante + 3).Value = "?"
+                wsDest.Cells(ligneEcriture, j + 3).Value = "✓"
             End If
-        Next semaine
+        Next j
 
         ligneEcriture = ligneEcriture + 1
     Next i
@@ -137,5 +83,6 @@ Sub PlanningHebdoResponsables()
     ' Formatage
     wsDest.Columns.AutoFit
 
+    MsgBox "Planning généré avec succès !"
 
 End Sub
