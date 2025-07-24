@@ -1,3 +1,55 @@
+
+
+Sub gantt()
+
+    
+
+    Dim gantt As Worksheet: Set gantt = ThisWorkbook.Sheets("gantt")
+    Dim data_alice As Worksheet: Set data_alice = ThisWorkbook.Sheets("data_alice")
+    
+    gantt.UsedRange.Cells = ""
+
+    
+    Set dict = CreateObject("Scripting.Dictionary")
+    
+    ' remplis gantt
+    
+    Dim n As Integer: n = 2
+    
+    Dim responsable As String: responsable = data_alice.Range("J" & n).Value
+    
+    While data_alice.Range("J" & n) <> ""
+    
+        responsable = data_alice.Range("J" & n).Value
+        
+        If Not dict.exists(responsable) Then
+        
+            dict.Add responsable, n
+            
+        End If
+
+        gantt.Rows(dict(responsable)).Insert
+        gantt.Range("A" & dict(responsable)).Value = responsable
+        
+        
+        For Each r In dict
+            If r <> responsable Then
+                dict(r) = dict(r) + 1
+            End If
+        Next r
+        
+        n = n + 1
+    Wend
+    
+    
+    'Debug.Print WorksheetFunction.WeekNum(CDate(data_alice.Range("M2")), 21)
+    
+    
+
+
+End Sub
+
+
 Sub PlanningHebdoResponsables()
 
     Dim wsSource As Worksheet, wsDest As Worksheet
@@ -13,17 +65,17 @@ Sub PlanningHebdoResponsables()
     Dim colSemaine As Integer
 
     ' Référence à la feuille contenant les données
-    Set wsSource = ThisWorkbook.Sheets("Feuil1") ' adapte si besoin
+    Set wsSource = ThisWorkbook.Sheets("data_alice") ' adapte si besoin
 
     ' Créer une nouvelle feuille pour le planning
     On Error Resume Next
     Application.DisplayAlerts = False
-    ThisWorkbook.Sheets("Planning").Delete ' on écrase si existe
+    ThisWorkbook.Sheets("gantt").Delete ' on écrase si existe
     Application.DisplayAlerts = True
     On Error GoTo 0
 
     Set wsDest = ThisWorkbook.Sheets.Add
-    wsDest.Name = "Planning"
+    wsDest.Name = "gantt"
 
     ' Date actuelle et semaine courante
     currentDate = Date
@@ -31,11 +83,11 @@ Sub PlanningHebdoResponsables()
 
     ' Trouver la date fin maximale
     derLigne = wsSource.Cells(wsSource.Rows.Count, 1).End(xlUp).Row
-    dateFinMax = wsSource.Cells(2, 4).Value
+    dateFinMax = wsSource.Cells(2, 11).Value
 
     For i = 2 To derLigne
         If wsSource.Cells(i, 4).Value > dateFinMax Then
-            dateFinMax = wsSource.Cells(i, 4).Value
+            dateFinMax = wsSource.Cells(i, 11).Value
         End If
     Next i
 
@@ -45,6 +97,9 @@ Sub PlanningHebdoResponsables()
     wsDest.Cells(1, 1).Value = "Responsable"
     wsDest.Cells(1, 2).Value = "Projet"
     colSemaine = 3
+    
+    Debug.Print semaineCourante
+    Debug.Print semaineMax
 
     For semaine = semaineCourante To semaineMax
         wsDest.Cells(1, colSemaine).Value = "Semaine " & semaine
@@ -57,10 +112,10 @@ Sub PlanningHebdoResponsables()
     ' Une boucle sur les données source
     For i = 2 To derLigne
         Dim responsable As String, projet As String
-        responsable = wsSource.Cells(i, 1).Value
+        responsable = wsSource.Cells(i, 10).Value
         projet = wsSource.Cells(i, 2).Value
-        dateDebut = wsSource.Cells(i, 3).Value
-        dateFin = wsSource.Cells(i, 4).Value
+        dateDebut = wsSource.Cells(i, 13).Value
+        dateFin = wsSource.Cells(i, 11).Value
 
         ' Ligne de base
         wsDest.Cells(ligneEcriture, 1).Value = responsable
@@ -72,7 +127,7 @@ Sub PlanningHebdoResponsables()
             dateSemaine = DateAdd("ww", semaine - semaineCourante, currentDate)
 
             If dateFin >= dateSemaine And dateDebut <= dateSemaine Then
-                wsDest.Cells(ligneEcriture, semaine - semaineCourante + 3).Value = "✓"
+                wsDest.Cells(ligneEcriture, semaine - semaineCourante + 3).Value = "?"
             End If
         Next semaine
 
@@ -81,6 +136,6 @@ Sub PlanningHebdoResponsables()
 
     ' Formatage
     wsDest.Columns.AutoFit
-    MsgBox "Planning généré avec succès !"
+
 
 End Sub
